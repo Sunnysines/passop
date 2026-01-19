@@ -62,7 +62,7 @@ const Manager = () => {
                             trigger="hover">
                         </lord-icon>   
                             
-                        AddPasword</button>
+                        Save</button>
                 </div>
             </div>
 
