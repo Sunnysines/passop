@@ -18,6 +18,10 @@ const Navbar = () => {
                 <a className='hover:font-bold'href='#'>Contact</a>
             </li>
         </ul>
+        <button className='text-white bg-blue-500 my-5 rounded-md flex gap-4 justify-center items-center px-3 py-2 hover:bg-blue-400 cursor-pointer'> 
+          <img className='invert w-8 h-8' src="public\file.png" alt="download_pdflogo" />
+          Download Pdf
+        </button>
     </div>
     </nav>
   )
