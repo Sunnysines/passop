@@ -37,7 +37,10 @@ const Manager = () => {
     }   
     return (
         <>
-            <div className="absolute inset-0 -z-10 h-full w-full bg-blue-50 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]"><div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-400 opacity-20 blur-[100px]"></div></div>
+            <div className="absolute inset-0 -z-10 h-full w-full bg-blue-50 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
+                <div className="absolute left-0 right-0 top-0 -z-10 m-auto h-[310px] w-[310px] rounded-full bg-blue-400 opacity-20 blur-[100px]">
+                </div>
+            </div>
             <div className="mycontainer">
                 <h1 className='text-4xl text font-bold text-center min-w-32'><span className='text-blue-500'> &lt;</span>
                     Pass
@@ -78,7 +81,7 @@ const Manager = () => {
                         <tbody className='bg-blue-100'>
                             {passwordArray.map((item, index) => {
                                 return <tr>
-                                <td className='py-2 border border-white text-center min-w-32'><a href={item.site} target='_blank'>{item.site}</a></td>
+                                <td className='py-2 border border-white text-center min-w-32'><a href={item.site} target=''>{item.site}</a></td>
                                 <td className='py-2 border border-white text-center min-w-32'>{item.username}</td>
                                 <td className='py-2 border border-white text-center min-w-32'>{item.password}</td>
                             </tr>
