@@ -1,6 +1,7 @@
 import React from 'react'
 import { useRef, useState, useEffect} from 'react'
 const Manager = () => {
+    const Passwordref = useRef();
     const ref = useRef();
     const [form, setForm] = useState({site: "", username: "", password: ""})
     const [passwordArray, setpasswordArray] = useState([])
@@ -16,12 +17,14 @@ const Manager = () => {
     
 
     const showPassword = () => {
-        alert('Show Password clicked');
+        Passwordref.current.type = "text";
         if(ref.current.src.includes("public/hidden.png")){
             ref.current.src = "public/eye.png"
+            Passwordref.current.type = "password";
         }
         else{
             ref.current.src = "public/hidden.png"
+            Passwordref.current.type = "text";
         }
         
 
@@ -52,7 +55,7 @@ const Manager = () => {
                         <input value={form.username} onChange={handleChange} placeholder='Enter Username' type="text" className="rounded-full bg-white px-4 py-1 border border-blue-500 w-full" name="username" id="" />
                         <div className='relative'>
 
-                        <input value={form.password} onChange={handleChange} placeholder='Enter Password' type="text" className="rounded-full bg-white px-4 py-1 border border-blue-500 w-full" name="password" id="" />
+                        <input ref={Passwordref} value={form.password} onChange={handleChange} placeholder='Enter Password' type="password" className="rounded-full bg-white px-4 py-1 border border-blue-500 w-full" name="password" id="" />
                         <span className='absolute right-[3px] top-[4px] cursor-pointer' onClick={showPassword} >
                             <img ref={ref} className='p-1' width={26} src="\public\eye.png" alt="eye" />
                         </span>
@@ -65,7 +68,7 @@ const Manager = () => {
                             trigger="hover">
                         </lord-icon>   
                             
-                        Save</button>
+                            Save</button>
                 </div>
                 <div className="passwords">
                     <h2 className='font-bold text-2xl py-4'>Your Passwords</h2>
@@ -86,6 +89,7 @@ const Manager = () => {
                                 <td className='py-2 border border-white text-center min-w-32'>{item.password}</td>
                             </tr>
                             })}
+                        
                         
                           
                         </tbody>
