@@ -1,25 +1,24 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import Navbar from './components/Navbar.jsx'
-import Manager from './components/Manager.jsx'
-import Footer from './components/Footer.jsx'
+import { useState, useEffect } from 'react'
+import Navbar from './components/Navbar'
+import Manager from './components/Manager'
+import Footer from './components/Footer'
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [passwordArray, setpasswordArray] = useState([])
+
+  useEffect(() => {
+    let passwords = localStorage.getItem("passwords");
+    if (passwords) {
+      setpasswordArray(JSON.parse(passwords));
+    }
+  }, [])
 
   return (
-  <>
-    <Navbar />
-    <div className="bg-blue-50 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:14px_24px]">
-
-    <div className="min-h-[90vh]">
-
-    <Manager />
-    </div>
-    </div>
-    <Footer />
-  </>
+    <>
+      <Navbar passwordArray={passwordArray} />
+      <Manager passwordArray={passwordArray} setpasswordArray={setpasswordArray} />
+      <Footer />
+    </>
   )
 }
 
