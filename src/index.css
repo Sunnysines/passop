@@ -1,7 +1,16 @@
 @import "tailwindcss";
 
 @layer components {
-  .mycontainer {
-    @apply container px-40 py-16 mx-auto;
-  }
-} 
+    /* This ensures your app stays centered and aligned on big screens */
+    .mycontainer {
+        @apply max-w-6xl mx-auto w-full px-5 md:px-10 lg:px-16;
+    }
+
+    /* Optional: Custom scrollbar for the responsive table */
+    .overflow-x-auto::-webkit-scrollbar {
+        height: 6px;
+    }
+    .overflow-x-auto::-webkit-scrollbar-thumb {
+        @apply bg-blue-300 rounded-full;
+    }
+}
