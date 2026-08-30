@@ -153,9 +153,10 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                         </>
                     ) : (
                         <>
-                            <Database size={14} className="text-blue-600" />
+                            <Cloud size={14} className="text-blue-600" />
                             <span>Storage:</span>
                             <span className="font-bold text-emerald-600">MongoDB</span>
+                            <Database size={14} className="text-emerald-600" />
                             <span className="text-slate-600">used to save and sync passwords</span>
                         </>
                     )}
