@@ -1,5 +1,6 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Otp from '../models/Otp.js';
@@ -12,10 +13,9 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Persistent cached transporter instance
+// Persistent cached transporter instance for local SMTP
 let cachedTransporter = null;
 
-// Setup nodemailer transporter with explicit SSL port 465, IPv4 forcing, and pooling
 const getTransporter = () => {
   const user = process.env.GMAIL_USER?.trim();
   const pass = process.env.GMAIL_APP_PASSWORD ? process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, '') : null;
@@ -28,36 +28,23 @@ const getTransporter = () => {
     cachedTransporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
-      secure: true, // true for port 465 with SSL
-      pool: true, // reuse existing TCP connections
+      secure: true,
+      pool: true,
       maxConnections: 3,
       maxMessages: 100,
       auth: { user, pass },
-      tls: {
-        rejectUnauthorized: false
-      },
-      family: 4, // Force IPv4 to prevent Render IPv6 routing hangs
-      connectionTimeout: 15000,
-      greetingTimeout: 15000,
-      socketTimeout: 20000
+      tls: { rejectUnauthorized: false },
+      family: 4,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
   }
 
   return cachedTransporter;
 };
 
-// Helper for sending mail with 1 automated retry
-const sendMailSafely = async (transporter, mailOptions) => {
-  try {
-    return await transporter.sendMail(mailOptions);
-  } catch (firstErr) {
-    console.warn(`[AUTH SMTP] First attempt failed (${firstErr.message}). Retrying...`);
-    // Retry once
-    return await transporter.sendMail(mailOptions);
-  }
-};
-
-// Route: Send OTP (with signup existence check and delete account support)
+// Route: Send OTP (supports Resend HTTPS API & Gmail SMTP fallback)
 router.post('/send-otp', async (req, res) => {
   try {
     const { email, mode = 'login' } = req.body;
@@ -113,40 +100,73 @@ router.post('/send-otp', async (req, res) => {
       ? `🚨 Security Alert: PassSaver Account Deletion OTP: ${otpCode}`
       : `Your PassSaver Verification Code: ${otpCode}`;
 
-    const transporter = getTransporter();
+    const htmlBody = `
+      <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <h2 style="color: #1e293b; margin: 0; font-size: 24px;">&lt;<span style="color: #3b82f6;">Pass</span> Saver/&gt;</h2>
+          <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Secure Password Manager</p>
+        </div>
+        <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;">
+          <p style="color: #334155; font-size: 16px; margin-bottom: 16px;">Hello,</p>
+          <p style="color: ${isDeleteMode ? '#dc2626' : '#334155'}; font-size: 15px; margin-bottom: 24px; font-weight: ${isDeleteMode ? 'bold' : 'normal'};">
+            ${isDeleteMode 
+              ? 'You requested to PERMANENTLY DELETE your PassSaver account and all stored passwords. Use this confirmation code:' 
+              : 'Your one-time verification code for PassSaver is:'}
+          </p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: ${isDeleteMode ? '#dc2626' : '#2563eb'}; padding: 12px 24px; background: ${isDeleteMode ? '#fef2f2' : '#eff6ff'}; border-radius: 8px; display: inline-block; margin-bottom: 24px; border: 1px dashed ${isDeleteMode ? '#fca5a5' : '#93c5fd'};">
+            ${otpCode}
+          </div>
+          <p style="color: #64748b; font-size: 13px; margin: 0;">This OTP will expire in <strong>5 minutes</strong>. If you did not request this, please ignore this message.</p>
+        </div>
+        <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">
+          © 2026 PassSaver. All rights reserved.
+        </p>
+      </div>
+    `;
 
+    // OPTION 1: Resend HTTPS API (Recommended on Render / cloud - bypasses all SMTP port blocks)
+    if (process.env.RESEND_API_KEY) {
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY.trim());
+        const { error } = await resend.emails.send({
+          from: 'PassSaver <onboarding@resend.dev>',
+          to: cleanEmail,
+          subject: emailSubject,
+          html: htmlBody
+        });
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        console.log(`[AUTH] OTP successfully sent via Resend HTTPS API to ${cleanEmail}`);
+        return res.json({
+          success: true,
+          message: `OTP sent successfully to ${cleanEmail}`
+        });
+      } catch (resendErr) {
+        console.error('[AUTH] Resend API error:', resendErr.message);
+        console.log(`[AUTH DEV FALLBACK] OTP for ${cleanEmail}: ${otpCode}`);
+        return res.json({
+          success: true,
+          message: `Email delivery issue. OTP generated (Check server console): ${otpCode}`,
+          devOtp: otpCode
+        });
+      }
+    }
+
+    // OPTION 2: Nodemailer Gmail SMTP (Works locally on machine)
+    const transporter = getTransporter();
     if (transporter) {
       try {
         const mailOptions = {
           from: `"PassSaver Security" <${process.env.GMAIL_USER}>`,
           to: cleanEmail,
           subject: emailSubject,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #f8fafc;">
-              <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #1e293b; margin: 0; font-size: 24px;">&lt;<span style="color: #3b82f6;">Pass</span> Saver/&gt;</h2>
-                <p style="color: #64748b; font-size: 14px; margin-top: 4px;">Secure Password Manager</p>
-              </div>
-              <div style="background-color: #ffffff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;">
-                <p style="color: #334155; font-size: 16px; margin-bottom: 16px;">Hello,</p>
-                <p style="color: ${isDeleteMode ? '#dc2626' : '#334155'}; font-size: 15px; margin-bottom: 24px; font-weight: ${isDeleteMode ? 'bold' : 'normal'};">
-                  ${isDeleteMode 
-                    ? 'You requested to PERMANENTLY DELETE your PassSaver account and all stored passwords. Use this confirmation code:' 
-                    : 'Your one-time verification code for PassSaver is:'}
-                </p>
-                <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: ${isDeleteMode ? '#dc2626' : '#2563eb'}; padding: 12px 24px; background: ${isDeleteMode ? '#fef2f2' : '#eff6ff'}; border-radius: 8px; display: inline-block; margin-bottom: 24px; border: 1px dashed ${isDeleteMode ? '#fca5a5' : '#93c5fd'};">
-                  ${otpCode}
-                </div>
-                <p style="color: #64748b; font-size: 13px; margin: 0;">This OTP will expire in <strong>5 minutes</strong>. If you did not request this, please change your password immediately.</p>
-              </div>
-              <p style="text-align: center; color: #94a3b8; font-size: 12px; margin-top: 20px;">
-                © 2026 PassSaver. All rights reserved.
-              </p>
-            </div>
-          `
+          html: htmlBody
         };
 
-        await sendMailSafely(transporter, mailOptions);
+        await transporter.sendMail(mailOptions);
         console.log(`[AUTH] OTP successfully sent via Gmail to ${cleanEmail} (mode: ${mode})`);
         return res.json({
           success: true,
@@ -157,18 +177,19 @@ router.post('/send-otp', async (req, res) => {
         console.log(`[AUTH DEV FALLBACK] OTP for ${cleanEmail}: ${otpCode}`);
         return res.json({
           success: true,
-          message: `Gmail delivery issue. OTP generated (Check server console): ${otpCode}`,
+          message: `SMTP connection blocked by hosting provider. Use Resend API key or check console: ${otpCode}`,
           devOtp: otpCode
         });
       }
-    } else {
-      console.log(`[AUTH DEV MODE] No Gmail credentials configured. OTP for ${cleanEmail} is: ${otpCode}`);
-      return res.json({
-        success: true,
-        message: `OTP generated for ${cleanEmail} (Simulated in Dev Mode: ${otpCode})`,
-        devOtp: otpCode
-      });
     }
+
+    // OPTION 3: Development console fallback
+    console.log(`[AUTH DEV MODE] No email credentials configured. OTP for ${cleanEmail} is: ${otpCode}`);
+    return res.json({
+      success: true,
+      message: `OTP generated for ${cleanEmail} (Simulated in Dev Mode: ${otpCode})`,
+      devOtp: otpCode
+    });
   } catch (error) {
     console.error('Error sending OTP:', error);
     res.status(500).json({ success: false, message: 'Server error while generating OTP.' });

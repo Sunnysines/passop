@@ -26,6 +26,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-toastify": "^11.0.5",
+    "resend": "^6.25.0",
     "tailwindcss": "^4.1.18",
     "uuid": "^13.0.0"
   },
