@@ -12,18 +12,26 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Setup nodemailer transporter
+// Setup nodemailer transporter with explicit SSL port 465 (required for Render/cloud deployments)
 const getTransporter = () => {
-  const user = process.env.GMAIL_USER;
-  const pass = process.env.GMAIL_APP_PASSWORD;
+  const user = process.env.GMAIL_USER?.trim();
+  const pass = process.env.GMAIL_APP_PASSWORD ? process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, '') : null;
 
   if (!user || !pass) {
     return null;
   }
 
   return nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass }
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // true for port 465 with SSL
+    auth: { user, pass },
+    tls: {
+      rejectUnauthorized: false
+    },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
 };
 
