@@ -24,7 +24,7 @@ function App() {
     });
   }
 
-  // Fetch passwords either from MongoDB (if logged in) or localStorage (if guest)
+  // Fetch passwords strictly from MongoDB for authenticated user
   const loadPasswords = useCallback(async (authToken) => {
     if (authToken) {
       setIsLoading(true);
@@ -37,6 +37,7 @@ function App() {
         const data = await res.json();
         if (data.success && Array.isArray(data.passwords)) {
           setpasswordArray(data.passwords);
+          localStorage.setItem("passwords", JSON.stringify(data.passwords));
           return;
         }
       } catch (err) {
@@ -46,13 +47,13 @@ function App() {
       }
     }
 
-    // Fallback to localStorage for guest or offline mode
+    // When not logged in / guest mode: load local storage or start empty
     const local = localStorage.getItem("passwords");
     if (local) {
       try {
         setpasswordArray(JSON.parse(local));
-      } catch (e) {
-        console.error(e);
+      } catch {
+        setpasswordArray([]);
       }
     } else {
       setpasswordArray([]);
@@ -95,28 +96,8 @@ function App() {
     localStorage.setItem("passsaver_user", JSON.stringify(userData));
     localStorage.setItem("passsaver_token", userToken);
 
-    // Sync any existing local storage passwords to MongoDB on first login
-    const localPasswords = localStorage.getItem("passwords");
-    if (localPasswords) {
-      try {
-        const parsed = JSON.parse(localPasswords);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          await fetch('/api/passwords/sync', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${userToken}`
-            },
-            body: JSON.stringify({ passwords: parsed })
-          });
-        }
-      } catch (err) {
-        console.error("Error syncing local passwords to MongoDB:", err);
-      }
-    }
-
-    // Load full passwords from MongoDB
-    loadPasswords(userToken);
+    // Fetch this user's isolated passwords from MongoDB (new users will get an empty list [])
+    await loadPasswords(userToken);
   };
 
   const handleLogout = () => {
@@ -124,8 +105,9 @@ function App() {
     setToken(null);
     localStorage.removeItem("passsaver_user");
     localStorage.removeItem("passsaver_token");
+    localStorage.removeItem("passwords"); // Clear out stored passwords so subsequent users/guests start clean
+    setpasswordArray([]);
     notify("Logged out successfully");
-    loadPasswords(null);
   };
 
   const handleAccountDeleted = () => {
