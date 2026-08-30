@@ -162,10 +162,10 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                     ) : (
                         <>
                             <Cloud size={14} className="text-blue-600" />
-                            <span>Storage: <strong>Local Storage</strong></span>
+                            <span>Storage:</span>
                             <button 
                                 onClick={() => onOpenAuth?.('login')}
-                                className="text-blue-600 underline font-semibold ml-1 cursor-pointer hover:text-blue-800"
+                                className="text-blue-600 underline font-semibold cursor-pointer hover:text-blue-800"
                             >
                                 Login to sync with MongoDB
                             </button>
