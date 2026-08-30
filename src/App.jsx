@@ -12,12 +12,13 @@ function App() {
   const [token, setToken] = useState(null)
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [authMode, setAuthMode] = useState('login')
+  const [authEmail, setAuthEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const notify = (msg, type = "success") => {
     toast[type](msg, {
       position: "top-right",
-      autoClose: 2000,
+      autoClose: 2500,
       theme: "colored",
       style: type === "success" ? { backgroundColor: "#3b82f6" } : { backgroundColor: "#ef4444" }
     });
@@ -78,8 +79,9 @@ function App() {
     loadPasswords(null);
   }, [loadPasswords]);
 
-  const handleOpenAuth = (mode = 'login') => {
+  const handleOpenAuth = (mode = 'login', email = '') => {
     setAuthMode(mode);
+    setAuthEmail(email);
     setIsAuthOpen(true);
   };
 
@@ -126,6 +128,16 @@ function App() {
     loadPasswords(null);
   };
 
+  const handleAccountDeleted = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem("passsaver_user");
+    localStorage.removeItem("passsaver_token");
+    localStorage.removeItem("passwords");
+    setpasswordArray([]);
+    notify("Account and saved passwords deleted permanently.", "error");
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <ToastContainer />
@@ -152,7 +164,9 @@ function App() {
         isOpen={isAuthOpen}
         onClose={handleCloseAuth}
         initialMode={authMode}
+        initialEmail={authEmail}
         onAuthSuccess={handleAuthSuccess}
+        onAccountDeleted={handleAccountDeleted}
         notify={notify}
       />
     </div>

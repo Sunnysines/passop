@@ -1,6 +1,7 @@
 import React from 'react'
 import { jsPDF } from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { Trash2 } from 'lucide-react'
 
 const Navbar = ({ passwordArray, user, onOpenAuth, onLogout }) => {
 
@@ -84,14 +85,22 @@ const Navbar = ({ passwordArray, user, onOpenAuth, onLogout }) => {
                             </button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex items-center gap-1.5 sm:gap-3">
                             <div className="hidden sm:flex items-center gap-2 bg-slate-700/70 px-3 py-1 rounded-full border border-slate-600/80 text-xs">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                                 <span className="truncate max-w-[130px] md:max-w-[180px] text-slate-200">{user.email}</span>
                             </div>
                             <button
+                                onClick={() => onOpenAuth('delete_account', user.email)}
+                                className="text-slate-400 hover:text-rose-400 font-medium px-2 py-1 rounded hover:bg-slate-700/40 cursor-pointer transition text-xs flex items-center gap-1"
+                                title="Delete Account using Email OTP"
+                            >
+                                <Trash2 size={13} />
+                                <span className="hidden md:inline">Delete Account</span>
+                            </button>
+                            <button
                                 onClick={onLogout}
-                                className="text-slate-300 hover:text-rose-400 font-semibold px-2 py-1 rounded hover:bg-slate-700/50 cursor-pointer transition text-xs sm:text-sm"
+                                className="text-slate-300 hover:text-rose-300 font-semibold px-2 py-1 rounded hover:bg-slate-700/50 cursor-pointer transition text-xs sm:text-sm"
                             >
                                 Logout
                             </button>

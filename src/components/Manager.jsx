@@ -56,11 +56,13 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                 const data = await res.json();
 
                 if (data.success) {
-                    const updatedArray = isEdit 
+                    const exists = passwordArray.some(item => item.id === entryId);
+                    const updatedArray = exists 
                         ? passwordArray.map(item => item.id === entryId ? entryData : item)
-                        : [entryData, ...passwordArray.filter(item => item.id !== entryId)];
+                        : [entryData, ...passwordArray];
                     
                     setpasswordArray(updatedArray);
+                    localStorage.setItem("passwords", JSON.stringify(updatedArray));
                     setForm({ name: "", email: "", site: "", username: "", password: "" });
                     setShowPasswordState(false);
                     notify?.(isEdit ? "Password Updated in MongoDB!" : "Password Saved to MongoDB!");
@@ -77,7 +79,10 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
 
         // Local Storage fallback for guest mode
         let passwords = JSON.parse(localStorage.getItem("passwords")) || [];
-        const updatedArray = [...passwords.filter(item => item.id !== entryId), entryData];
+        const exists = passwords.some(item => item.id === entryId);
+        const updatedArray = exists
+            ? passwords.map(item => item.id === entryId ? entryData : item)
+            : [entryData, ...passwords];
 
         setpasswordArray(updatedArray);
         localStorage.setItem("passwords", JSON.stringify(updatedArray));
@@ -117,7 +122,7 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
         const itemToEdit = passwordArray.find(i => i.id === id);
         if (itemToEdit) {
             setForm(itemToEdit);
-            setpasswordArray(passwordArray.filter(item => item.id !== id));
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 
@@ -192,14 +197,27 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                         </div>
                     </div>
 
-                    <button 
-                        onClick={Savepassword} 
-                        disabled={isSaving}
-                        className='flex justify-center min-w-32 items-center gap-2 bg-blue-400 rounded-full hover:bg-blue-300 px-8 py-2 w-fit border border-blue-900 font-bold cursor-pointer transition active:scale-95 disabled:opacity-70'
-                    >
-                        <lord-icon src="https://cdn.lordicon.com/efxgwrkc.json" trigger="hover" style={{ width: "20px", height: "20px" }}></lord-icon>
-                        {isSaving ? "Saving..." : (form.id ? "Update" : "Save")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={Savepassword} 
+                            disabled={isSaving}
+                            className='flex justify-center min-w-32 items-center gap-2 bg-blue-400 rounded-full hover:bg-blue-300 px-8 py-2 w-fit border border-blue-900 font-bold cursor-pointer transition active:scale-95 disabled:opacity-70'
+                        >
+                            <lord-icon src="https://cdn.lordicon.com/efxgwrkc.json" trigger="hover" style={{ width: "20px", height: "20px" }}></lord-icon>
+                            {isSaving ? "Saving..." : (form.id ? "Update" : "Save")}
+                        </button>
+                        {form.id && (
+                            <button 
+                                onClick={() => {
+                                    setForm({ name: "", email: "", site: "", username: "", password: "" });
+                                    setShowPasswordState(false);
+                                }}
+                                className="bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-full px-5 py-2 font-semibold text-sm cursor-pointer transition active:scale-95 border border-slate-300"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 <div className="passwords px-4 flex-grow w-full">
