@@ -31,6 +31,12 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
     }
 
     const Savepassword = async () => {
+        if (!user || !token) {
+            notify?.("Please login or sign up to save passwords!", "error");
+            onOpenAuth?.('signup');
+            return;
+        }
+
         if (form.site.length === 0 || form.username.length === 0 || form.password.length === 0) {
             notify?.("Required fields are empty!", "error");
             return;
@@ -42,54 +48,40 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
 
         setIsSaving(true);
 
-        // If authenticated, persist to MongoDB backend
-        if (token) {
-            try {
-                const res = await fetch('/api/passwords', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify(entryData)
-                });
-                const data = await res.json();
+        // Persist to MongoDB backend for authenticated user
+        try {
+            const res = await fetch('/api/passwords', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(entryData)
+            });
+            const data = await res.json();
 
-                if (data.success) {
-                    const exists = passwordArray.some(item => item.id === entryId);
-                    const updatedArray = exists 
-                        ? passwordArray.map(item => item.id === entryId ? entryData : item)
-                        : [entryData, ...passwordArray];
-                    
-                    setpasswordArray(updatedArray);
-                    localStorage.setItem("passwords", JSON.stringify(updatedArray));
-                    setForm({ name: "", email: "", site: "", username: "", password: "" });
-                    setShowPasswordState(false);
-                    notify?.(isEdit ? "Password Updated in MongoDB!" : "Password Saved to MongoDB!");
-                    setIsSaving(false);
-                    return;
-                } else {
-                    notify?.(data.message || "Failed to save password in MongoDB", "error");
-                }
-            } catch (err) {
-                console.error("Error saving to MongoDB:", err);
-                notify?.("Could not reach backend database. Saving locally...", "error");
+            if (data.success) {
+                const exists = passwordArray.some(item => item.id === entryId);
+                const updatedArray = exists 
+                    ? passwordArray.map(item => item.id === entryId ? entryData : item)
+                    : [entryData, ...passwordArray];
+                
+                setpasswordArray(updatedArray);
+                localStorage.setItem("passwords", JSON.stringify(updatedArray));
+                setForm({ name: "", email: "", site: "", username: "", password: "" });
+                setShowPasswordState(false);
+                notify?.(isEdit ? "Password Updated in MongoDB!" : "Password Saved to MongoDB!");
+                setIsSaving(false);
+                return;
+            } else {
+                notify?.(data.message || "Failed to save password in MongoDB", "error");
             }
+        } catch (err) {
+            console.error("Error saving to MongoDB:", err);
+            notify?.("Could not reach backend database.", "error");
+        } finally {
+            setIsSaving(false);
         }
-
-        // Local Storage fallback for guest mode
-        let passwords = JSON.parse(localStorage.getItem("passwords")) || [];
-        const exists = passwords.some(item => item.id === entryId);
-        const updatedArray = exists
-            ? passwords.map(item => item.id === entryId ? entryData : item)
-            : [entryData, ...passwords];
-
-        setpasswordArray(updatedArray);
-        localStorage.setItem("passwords", JSON.stringify(updatedArray));
-        setForm({ name: "", email: "", site: "", username: "", password: "" });
-        setShowPasswordState(false);
-        setIsSaving(false);
-        notify?.(isEdit ? "Password Updated Locally!" : (user ? "Password Saved Locally!" : "Saved locally. Login to sync with MongoDB!"));
     }
 
     const deletePassword = async (id) => {
@@ -152,7 +144,7 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                 <p className='text-blue-900 text-lg text-center mb-4'>Your own Password Manager</p>
 
                 {/* Storage Mode Pill Indicator */}
-                <div className="mb-4 flex items-center gap-2 px-3 py-1 bg-white/80 border border-blue-200 rounded-full shadow-xs text-xs font-medium text-slate-700">
+                <div className="mb-4 flex flex-wrap justify-center items-center gap-2 px-3.5 py-1.5 bg-white/90 border border-blue-200 rounded-full shadow-xs text-xs font-medium text-slate-700">
                     {user ? (
                         <>
                             <Database size={14} className="text-emerald-600" />
@@ -162,13 +154,21 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                     ) : (
                         <>
                             <Cloud size={14} className="text-blue-600" />
-                            <span>Storage:</span>
+                            <span>Please</span>
                             <button 
                                 onClick={() => onOpenAuth?.('login')}
-                                className="text-blue-600 underline font-semibold cursor-pointer hover:text-blue-800"
+                                className="text-blue-600 underline font-bold cursor-pointer hover:text-blue-800"
                             >
-                                Login to sync with MongoDB
+                                Login
                             </button>
+                            <span>or</span>
+                            <button 
+                                onClick={() => onOpenAuth?.('signup')}
+                                className="text-blue-600 underline font-bold cursor-pointer hover:text-blue-800"
+                            >
+                                Sign Up
+                            </button>
+                            <span>to save and sync passwords</span>
                         </>
                     )}
                 </div>
@@ -235,7 +235,9 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                             Loading passwords from MongoDB...
                         </div>
                     ) : (passwordArray.length === 0 && !form.id) ? (
-                        <p className='text-gray-500 text-center py-6'>No passwords to show.</p>
+                        <p className='text-gray-500 text-center py-6'>
+                            {user ? "No passwords saved yet. Add your first password above!" : "No passwords to show. Sign in or Sign up to save and view your passwords."}
+                        </p>
                     ) : (
                         <div className="overflow-x-auto rounded-md border border-white shadow-xs">
                             <table className="table-auto w-full overflow-hidden mb-10 min-w-[600px]">

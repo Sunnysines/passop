@@ -13,8 +13,13 @@ const Navbar = ({ passwordArray, user, onOpenAuth, onLogout }) => {
 
         let userName = prompt("Please enter your name for the PDF header (Optional):");
         
+        // If user pressed Cancel in prompt, abort download
+        if (userName === null) {
+            return;
+        }
+
         const headingText = userName && userName.trim() !== "" 
-            ? `Password List of ${userName}` 
+            ? `Password List of ${userName.trim()}` 
             : "Your Saved Passwords";
 
         const date = new Date();
