@@ -12,7 +12,10 @@ const generateOTP = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
-// Setup nodemailer transporter with explicit SSL port 465 (required for Render/cloud deployments)
+// Persistent cached transporter instance
+let cachedTransporter = null;
+
+// Setup nodemailer transporter with explicit SSL port 465, IPv4 forcing, and pooling
 const getTransporter = () => {
   const user = process.env.GMAIL_USER?.trim();
   const pass = process.env.GMAIL_APP_PASSWORD ? process.env.GMAIL_APP_PASSWORD.replace(/\s+/g, '') : null;
@@ -21,18 +24,37 @@ const getTransporter = () => {
     return null;
   }
 
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // true for port 465 with SSL
-    auth: { user, pass },
-    tls: {
-      rejectUnauthorized: false
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-  });
+  if (!cachedTransporter) {
+    cachedTransporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true, // true for port 465 with SSL
+      pool: true, // reuse existing TCP connections
+      maxConnections: 3,
+      maxMessages: 100,
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: false
+      },
+      family: 4, // Force IPv4 to prevent Render IPv6 routing hangs
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 20000
+    });
+  }
+
+  return cachedTransporter;
+};
+
+// Helper for sending mail with 1 automated retry
+const sendMailSafely = async (transporter, mailOptions) => {
+  try {
+    return await transporter.sendMail(mailOptions);
+  } catch (firstErr) {
+    console.warn(`[AUTH SMTP] First attempt failed (${firstErr.message}). Retrying...`);
+    // Retry once
+    return await transporter.sendMail(mailOptions);
+  }
 };
 
 // Route: Send OTP (with signup existence check and delete account support)
@@ -124,7 +146,7 @@ router.post('/send-otp', async (req, res) => {
           `
         };
 
-        await transporter.sendMail(mailOptions);
+        await sendMailSafely(transporter, mailOptions);
         console.log(`[AUTH] OTP successfully sent via Gmail to ${cleanEmail} (mode: ${mode})`);
         return res.json({
           success: true,
