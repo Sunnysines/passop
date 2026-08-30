@@ -124,7 +124,47 @@ router.post('/send-otp', async (req, res) => {
       </div>
     `;
 
-    // OPTION 1: Resend HTTPS API (Recommended on Render / cloud - bypasses all SMTP port blocks)
+    // OPTION 1: Brevo HTTPS API (Sends to ANY email address without domain restriction)
+    if (process.env.BREVO_API_KEY) {
+      try {
+        const senderEmail = process.env.GMAIL_USER?.trim() || 'ghosalsayantan293@gmail.com';
+        const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': process.env.BREVO_API_KEY.trim(),
+            'content-type': 'application/json'
+          },
+          body: JSON.stringify({
+            sender: { name: 'PassSaver Security', email: senderEmail },
+            to: [{ email: cleanEmail }],
+            subject: emailSubject,
+            htmlContent: htmlBody
+          })
+        });
+
+        const brevoData = await brevoRes.json();
+        if (!brevoRes.ok) {
+          throw new Error(brevoData.message || JSON.stringify(brevoData));
+        }
+
+        console.log(`[AUTH] OTP successfully sent via Brevo HTTPS API to ${cleanEmail}`);
+        return res.json({
+          success: true,
+          message: `OTP sent successfully to ${cleanEmail}`
+        });
+      } catch (brevoErr) {
+        console.error('[AUTH] Brevo API error:', brevoErr.message);
+        console.log(`[AUTH DEV FALLBACK] OTP for ${cleanEmail}: ${otpCode}`);
+        return res.json({
+          success: true,
+          message: `Brevo delivery issue. OTP generated (Check server console): ${otpCode}`,
+          devOtp: otpCode
+        });
+      }
+    }
+
+    // OPTION 2: Resend HTTPS API (Note: Resend test domain only delivers to account owner's email)
     if (process.env.RESEND_API_KEY) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY.trim());
@@ -149,7 +189,7 @@ router.post('/send-otp', async (req, res) => {
         console.log(`[AUTH DEV FALLBACK] OTP for ${cleanEmail}: ${otpCode}`);
         return res.json({
           success: true,
-          message: `Email delivery issue. OTP generated (Check server console): ${otpCode}`,
+          message: `Resend test mode limits delivery to account email. OTP generated: ${otpCode}`,
           devOtp: otpCode
         });
       }
