@@ -144,31 +144,19 @@ const Manager = ({ passwordArray, setpasswordArray, user, token, onOpenAuth, not
                 <p className='text-blue-900 text-lg text-center mb-4'>Your own Password Manager</p>
 
                 {/* Storage Mode Pill Indicator */}
-                <div className="mb-4 flex flex-wrap justify-center items-center gap-2 px-3.5 py-1.5 bg-white/90 border border-blue-200 rounded-full shadow-xs text-xs font-medium text-slate-700">
+                <div className="mb-4 flex flex-wrap justify-center items-center gap-1.5 px-3.5 py-1.5 bg-white/90 border border-blue-200 rounded-full shadow-xs text-xs font-medium text-slate-700">
                     {user ? (
                         <>
                             <Database size={14} className="text-emerald-600" />
                             <span>Connected to <strong className="text-emerald-700">MongoDB Cloud</strong></span>
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         </>
                     ) : (
                         <>
-                            <Cloud size={14} className="text-blue-600" />
-                            <span>Please</span>
-                            <button 
-                                onClick={() => onOpenAuth?.('login')}
-                                className="text-blue-600 underline font-bold cursor-pointer hover:text-blue-800"
-                            >
-                                Login
-                            </button>
-                            <span>or</span>
-                            <button 
-                                onClick={() => onOpenAuth?.('signup')}
-                                className="text-blue-600 underline font-bold cursor-pointer hover:text-blue-800"
-                            >
-                                Sign Up
-                            </button>
-                            <span>to save and sync passwords</span>
+                            <Database size={14} className="text-blue-600" />
+                            <span>Storage:</span>
+                            <span className="font-bold text-emerald-600">MongoDB</span>
+                            <span className="text-slate-600">used to save and sync passwords</span>
                         </>
                     )}
                 </div>
